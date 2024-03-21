@@ -37,6 +37,7 @@ License.
 
 # python imports
 import keras
+keras.backend.set_image_data_format('channels_last')
 import numpy as np
 import tensorflow as tf
 import keras.backend as K
@@ -483,13 +484,16 @@ class SampleConditionalGMM(Layer):
         tile_shape = tf.concat([batch, tf.convert_to_tensor([1, ], dtype='int32')], axis=0)
         means = tf.tile(tf.expand_dims(tf.scatter_nd(tmp_indices, means, self.shape), 0), tile_shape)
         means_map = tf.map_fn(lambda x: tf.gather(x[0], x[1]), [means, labels], dtype=tf.float32)
+        shape = tf.shape(means_map)
+        means_map = tf.reshape(means_map, shape[1:])
 
         # same for stds
         stds = tf.concat([inputs[2][..., i] for i in range(self.n_channels)], 1)
         stds = tf.tile(tf.expand_dims(tf.scatter_nd(tmp_indices, stds, self.shape), 0), tile_shape)
         stds_map = tf.map_fn(lambda x: tf.gather(x[0], x[1]), [stds, labels], dtype=tf.float32)
+        stds_map = tf.reshape(stds_map, shape[1:])
 
-        return stds_map * tf.random.normal(tf.shape(labels)) + means_map
+        return tf.reshape(stds_map * tf.random.normal(tf.shape(labels)) + means_map, shape[1:])
 
     def compute_output_shape(self, input_shape):
         return input_shape[0] if (self.n_channels == 1) else tuple(list(input_shape[0][:-1]) + [self.n_channels])
@@ -589,6 +593,7 @@ class SampleResolution(Layer):
         self.built = True
         super(SampleResolution, self).build(input_shape)
 
+    #@tf.function
     def call(self, inputs, **kwargs):
 
         if not self.add_batchsize:
@@ -599,7 +604,10 @@ class SampleResolution(Layer):
         else:
             batch = tf.split(tf.shape(inputs), [1, -1])[0]
             tile_shape = tf.concat([batch, tf.convert_to_tensor([1], dtype='int32')], axis=0)
-            self.min_res_tens = tf.tile(tf.expand_dims(self.min_res_tens, 0), tile_shape)
+            shape = self.min_res_tens.shape
+            if (shape != (None, 3) and shape is not None) and self.min_res_tens is not None:
+                self.min_res_tens = tf.tile(tf.expand_dims(self.min_res_tens, 0), tile_shape)
+            
 
             shape = tf.concat([batch, tf.convert_to_tensor([self.n_dims], dtype='int32')], axis=0)
             indices = tf.stack([tf.range(0, batch[0]), tf.random.uniform(batch, 0, self.n_dims, dtype='int32')], 1)
@@ -1154,6 +1162,8 @@ class IntensityAugmentation(Layer):
         return config
 
     def build(self, input_shape):
+        if isinstance(input_shape, list):
+            input_shape = input_shape[0]
         self.n_dims = len(input_shape) - 2
         self.n_channels = input_shape[-1]
         self.flatten_shape = np.prod(np.array(input_shape[1:-1]))
@@ -1244,8 +1254,9 @@ class IntensityAugmentation(Layer):
             for (channel, invert) in zip(split_channels, split_rand_invert):
                 inverted_channel.append(tf.map_fn(self._single_invert, [channel, invert], dtype=channel.dtype))
             inputs = tf.concat(inverted_channel, -1)
-
-        return inputs
+        
+        shape = tf.shape(inputs)
+        return tf.reshape(inputs, shape[1:])
 
     @staticmethod
     def _single_invert(inputs):

@@ -45,6 +45,10 @@ def metrics_model(input_model, label_list, metrics='dice'):
     last_tensor._keras_shape = tuple(last_tensor.get_shape().as_list())
     labels_gt._keras_shape = tuple(labels_gt.get_shape().as_list())
 
+    shape = tf.shape(labels_gt)
+    last_tensor = tf.reshape(last_tensor, shape)
+    print(labels_gt, last_tensor)
+    
     if metrics == 'dice':
         last_tensor = layers.DiceLoss()([labels_gt, last_tensor])
 
@@ -54,6 +58,7 @@ def metrics_model(input_model, label_list, metrics='dice'):
     else:
         raise Exception('metrics should either be "dice or "wl2, got {}'.format(metrics))
 
+    
     # create the model and return
     model = Model(inputs=input_model.inputs, outputs=last_tensor)
     return model

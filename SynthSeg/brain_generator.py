@@ -193,6 +193,8 @@ class BrainGenerator:
         """
 
         # prepare data files
+        super()
+        
         self.labels_paths = utils.list_images_in_folder(labels_dir)
         if subjects_prob is not None:
             self.subjects_prob = np.array(utils.reformat_to_list(subjects_prob, load_as_numpy=True), dtype='float32')
@@ -297,7 +299,7 @@ class BrainGenerator:
                                                 return_gradients=self.return_gradients)
         out_shape = lab_to_im_model.output[0].get_shape().as_list()[1:]
         return lab_to_im_model, out_shape
-
+    
     def _build_model_inputs_generator(self, mix_prior_and_random):
         # build model's inputs generator
         model_inputs_generator = build_model_inputs(path_label_maps=self.labels_paths,

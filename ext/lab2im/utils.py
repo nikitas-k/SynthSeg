@@ -923,6 +923,7 @@ def build_training_generator(gen, batchsize):
         else:
             target = np.zeros((1, 1))
         yield inputs, target
+    #return GeneratorDataAdapter(inputs)
 
 
 def find_closest_number_divisible_by_m(n, m, answer_type='lower'):

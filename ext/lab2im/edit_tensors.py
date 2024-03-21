@@ -99,7 +99,7 @@ def gaussian_kernel(sigma, max_sigma=None, blur_range=None, separable=True):
     else:
         assert max_sigma is not None, 'max_sigma must be provided when sigma is given as a tensor'
         sigma_tens = sigma
-    shape = sigma_tens.get_shape().as_list()
+    shape = sigma_tens.shape
 
     # get n_dims and batchsize
     if shape[0] is not None:
@@ -124,7 +124,6 @@ def gaussian_kernel(sigma, max_sigma=None, blur_range=None, separable=True):
     windowsize = np.int32(np.ceil(2.5 * max_sigma) / 2) * 2 + 1
 
     if separable:
-
         split_sigma = tf.split(sigma_tens, [1] * n_dims, axis=-1)
 
         kernels = list()

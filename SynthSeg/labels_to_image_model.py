@@ -185,10 +185,9 @@ def labels_to_image_model(labels_shape,
     # apply bias field
     if bias_field_std > 0:
         image = layers.BiasFieldCorruption(bias_field_std, bias_scale, False)(image)
-
+    
     # intensity augmentation
-    image = layers.IntensityAugmentation(clip=300, normalise=True, gamma_std=.5, separate_channels=True)(image)
-
+    image = layers.IntensityAugmentation(clip=300, normalise=True, gamma_std=.5, separate_channels=False)(image)
     # loop over channels
     channels = list()
     split = KL.Lambda(lambda x: tf.split(x, [1] * n_channels, axis=-1))(image) if (n_channels > 1) else [image]
@@ -229,7 +228,7 @@ def labels_to_image_model(labels_shape,
     # build model (dummy layer enables to keep the labels when plugging this model to other models)
     image = KL.Lambda(lambda x: x[0], name='image_out')([image, labels])
     brain_model = Model(inputs=list_inputs, outputs=[image, labels])
-
+    
     return brain_model
 
 

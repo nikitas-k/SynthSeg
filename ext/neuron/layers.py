@@ -18,6 +18,8 @@ License: GPLv3
 
 # third party
 import tensorflow as tf
+from tensorflow.python.keras.utils.tf_utils import ListWrapper
+from tensorflow.python.framework.tensor_shape import TensorShape
 from keras import backend as K
 from keras.layers import Layer
 from copy import deepcopy
@@ -346,16 +348,21 @@ class Resize(Layer):
             self.size0 = [self.size] * self.ndims
         elif self.size is None:
             self.size0 = [0] * self.ndims
-        elif isinstance(self.size, (list, tuple)):
+        elif isinstance(self.size, tuple) or isinstance(self.size, list):
             self.size0 = deepcopy(self.size)
             assert len(self.size0) == self.ndims, \
                 'size length {} does not match number of dimensions {}'.format(len(self.size0), self.ndims)
+        elif isinstance(self.size, ListWrapper):
+            self.size = self.size.as_list()
+            self.size0 = deepcopy(self.size)
+        elif isinstance(self.size, TensorShape):
+            self.size0 = deepcopy(self.size)
         else:
             raise Exception('size should be an int or a list/tuple of int (or None if zoom_factor is not set to None)')
 
         # confirm built
         self.built = True
-
+        
         super(Resize, self).build(input_shape)  # Be sure to call this somewhere!
 
     def call(self, inputs, **kwargs):
@@ -373,7 +380,6 @@ class Resize(Layer):
 
         # necessary for multi_gpu models...
         vol = K.reshape(vol, [-1, *self.inshape[1:]])
-
         # set value of missing size or zoom_factor
         if not any(self.zoom_factor0):
             self.zoom_factor0 = [self.size0[i] / self.inshape[i+1] for i in range(self.ndims)]
